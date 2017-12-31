@@ -80,6 +80,33 @@ static NSString *MMDrawerRightDrawerKey = @"MMDrawerRightDrawer";
 static NSString *MMDrawerCenterKey = @"MMDrawerCenter";
 static NSString *MMDrawerOpenSideKey = @"MMDrawerOpenSide";
 
+@interface UIView (navigationBar)
+
+-(UINavigationBar*)navigationBarContainedWithinSubviewsOfView;
+
+@end
+
+@implementation UIView (navigationBar)
+
+-(UINavigationBar*)navigationBarContainedWithinSubviewsOfView{
+    UINavigationBar * navBar = nil;
+    for(UIView * subview in [self subviews]){
+        if([self isKindOfClass:[UINavigationBar class]]){
+            navBar = (UINavigationBar*)self;
+            break;
+        }
+        else {
+            navBar = [subview navigationBarContainedWithinSubviewsOfView];
+            if (navBar != nil) {
+                break;
+            }
+        }
+    }
+    return navBar;
+}
+
+@end
+
 @interface MMDrawerCenterContainerView : UIView
 @property (nonatomic,assign) MMDrawerOpenCenterInteractionMode centerInteractionMode;
 @property (nonatomic,assign) MMDrawerSide openSide;
@@ -91,7 +118,7 @@ static NSString *MMDrawerOpenSideKey = @"MMDrawerOpenSide";
     UIView *hitView = [super hitTest:point withEvent:event];
     if(hitView &&
        self.openSide != MMDrawerSideNone){
-        UINavigationBar * navBar = [self navigationBarContainedWithinSubviewsOfView:self];
+        UINavigationBar * navBar = [self navigationBarContainedWithinSubviewsOfView];
         CGRect navBarFrame = [navBar convertRect:navBar.bounds toView:self];
         if((self.centerInteractionMode == MMDrawerOpenCenterInteractionModeNavigationBarOnly &&
            CGRectContainsPoint(navBarFrame, point) == NO) ||
@@ -102,22 +129,6 @@ static NSString *MMDrawerOpenSideKey = @"MMDrawerOpenSide";
     return hitView;
 }
 
--(UINavigationBar*)navigationBarContainedWithinSubviewsOfView:(UIView*)view{
-    UINavigationBar * navBar = nil;
-    for(UIView * subview in [view subviews]){
-        if([view isKindOfClass:[UINavigationBar class]]){
-            navBar = (UINavigationBar*)view;
-            break;
-        }
-        else {
-            navBar = [self navigationBarContainedWithinSubviewsOfView:subview];
-            if (navBar != nil) {
-                break;
-            }
-        }
-    }
-    return navBar;
-}
 @end
 
 @interface MMDrawerController () <UIGestureRecognizerDelegate>{
@@ -394,18 +405,8 @@ static NSString *MMDrawerOpenSideKey = @"MMDrawerOpenSide";
         return;
     }
   
-  if (_centerContainerView == nil) {
-    //This is related to Issue #152 (https://github.com/mutualmobile/MMDrawerController/issues/152)
-    // also fixed below in the getter for `childControllerContainerView`. Turns out we have
-    // two center container views getting added to the view during init,
-    // because the first request self.centerContainerView.bounds was kicking off a
-    // viewDidLoad, which caused us to be able to fall through this check twice.
-    //
-    //The fix is to grab the bounds, and then check again that the child container view has
-    //not been created.
-    
-    CGRect centerFrame = self.childControllerContainerView.bounds;
-    if(_centerContainerView == nil){
+    if (_centerContainerView == nil) {
+        CGRect centerFrame = self.childControllerContainerView.bounds;
         _centerContainerView = [[MMDrawerCenterContainerView alloc] initWithFrame:centerFrame];
         [self.centerContainerView setAutoresizingMask:UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight];
         [self.centerContainerView setBackgroundColor:[UIColor clearColor]];
@@ -413,7 +414,6 @@ static NSString *MMDrawerOpenSideKey = @"MMDrawerOpenSide";
         [self.centerContainerView setCenterInteractionMode:self.centerHiddenInteractionMode];
         [self.childControllerContainerView addSubview:self.centerContainerView];
     }
-  }
   
     UIViewController * oldCenterViewController = self.centerViewController;
     if(oldCenterViewController){
@@ -1001,21 +1001,11 @@ static NSString *MMDrawerOpenSideKey = @"MMDrawerOpenSide";
 
 -(UIView*)childControllerContainerView{
     if(_childControllerContainerView == nil){
-        //Issue #152 (https://github.com/mutualmobile/MMDrawerController/issues/152)
-        //Turns out we have two child container views getting added to the view during init,
-        //because the first request self.view.bounds was kicking off a viewDidLoad, which
-        //caused us to be able to fall through this check twice.
-        //
-        //The fix is to grab the bounds, and then check again that the child container view has
-        //not been created.
         CGRect childContainerViewFrame = self.view.bounds;
-        if(_childControllerContainerView == nil){
-            _childControllerContainerView = [[UIView alloc] initWithFrame:childContainerViewFrame];
-            [_childControllerContainerView setBackgroundColor:[UIColor clearColor]];
-            [_childControllerContainerView setAutoresizingMask:UIViewAutoresizingFlexibleHeight|UIViewAutoresizingFlexibleWidth];
-            [self.view addSubview:_childControllerContainerView];
-        }
-
+        _childControllerContainerView = [[UIView alloc] initWithFrame:childContainerViewFrame];
+        [_childControllerContainerView setBackgroundColor:[UIColor clearColor]];
+        [_childControllerContainerView setAutoresizingMask:UIViewAutoresizingFlexibleHeight|UIViewAutoresizingFlexibleWidth];
+        [self.view addSubview:_childControllerContainerView];
     }
     return _childControllerContainerView;
 }
@@ -1450,11 +1440,9 @@ static inline CGFloat originXForDrawerOriginAndTargetOriginOffset(CGFloat origin
 
 -(BOOL)isPointContainedWithinNavigationRect:(CGPoint)point{
     CGRect navigationBarRect = CGRectNull;
-    if([self.centerViewController isKindOfClass:[UINavigationController class]]){
-        UINavigationBar * navBar = [(UINavigationController*)self.centerViewController navigationBar];
-        navigationBarRect = [navBar convertRect:navBar.bounds toView:self.childControllerContainerView];
-        navigationBarRect = CGRectIntersection(navigationBarRect,self.childControllerContainerView.bounds);
-    }
+    UINavigationBar * navBar = [self.centerViewController.view navigationBarContainedWithinSubviewsOfView];
+    navigationBarRect = [navBar convertRect:navBar.bounds toView:self.childControllerContainerView];
+    navigationBarRect = CGRectIntersection(navigationBarRect,self.childControllerContainerView.bounds);
     return CGRectContainsPoint(navigationBarRect,point);
 }
 
