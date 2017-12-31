@@ -41,7 +41,7 @@
         CGRect rect = self.mm_drawerController.view.bounds;
         rect.size.width = self.mm_drawerController.maximumLeftDrawerWidth;
         if (self.mm_drawerController.showsStatusBarBackgroundView) {
-            rect.size.height -= 20.0f;
+            rect.size.height -= [self statusBarHeight];
         }
         return rect;
         
@@ -52,7 +52,7 @@
         rect.size.width = self.mm_drawerController.maximumRightDrawerWidth;
         rect.origin.x = CGRectGetWidth(self.mm_drawerController.view.bounds)-rect.size.width;
         if (self.mm_drawerController.showsStatusBarBackgroundView) {
-            rect.size.height -= 20.0f;
+            rect.size.height -= [self statusBarHeight];
         }
         return rect;
     }
@@ -61,4 +61,7 @@
     }
 }
 
+-(CGFloat)statusBarHeight {
+    return [UIApplication sharedApplication].statusBarFrame.size.height;
+}
 @end

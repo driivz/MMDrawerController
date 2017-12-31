@@ -42,4 +42,6 @@
  */
 @property(nonatomic, assign, readonly) CGRect mm_visibleDrawerFrame;
 
+-(CGFloat)statusBarHeight;
+
 @end
