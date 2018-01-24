@@ -80,33 +80,6 @@ static NSString *MMDrawerRightDrawerKey = @"MMDrawerRightDrawer";
 static NSString *MMDrawerCenterKey = @"MMDrawerCenter";
 static NSString *MMDrawerOpenSideKey = @"MMDrawerOpenSide";
 
-@interface UIView (navigationBar)
-
--(UINavigationBar*)navigationBarContainedWithinSubviewsOfView;
-
-@end
-
-@implementation UIView (navigationBar)
-
--(UINavigationBar*)navigationBarContainedWithinSubviewsOfView{
-    UINavigationBar * navBar = nil;
-    for(UIView * subview in [self subviews]){
-        if([self isKindOfClass:[UINavigationBar class]]){
-            navBar = (UINavigationBar*)self;
-            break;
-        }
-        else {
-            navBar = [subview navigationBarContainedWithinSubviewsOfView];
-            if (navBar != nil) {
-                break;
-            }
-        }
-    }
-    return navBar;
-}
-
-@end
-
 @interface MMDrawerCenterContainerView : UIView
 @property (nonatomic,assign) MMDrawerOpenCenterInteractionMode centerInteractionMode;
 @property (nonatomic,assign) MMDrawerSide openSide;
@@ -118,7 +91,7 @@ static NSString *MMDrawerOpenSideKey = @"MMDrawerOpenSide";
     UIView *hitView = [super hitTest:point withEvent:event];
     if(hitView &&
        self.openSide != MMDrawerSideNone){
-        UINavigationBar * navBar = [self navigationBarContainedWithinSubviewsOfView];
+        UINavigationBar * navBar = [self navigationBarContainedWithinSubviewsOfView:self];
         CGRect navBarFrame = [navBar convertRect:navBar.bounds toView:self];
         if((self.centerInteractionMode == MMDrawerOpenCenterInteractionModeNavigationBarOnly &&
            CGRectContainsPoint(navBarFrame, point) == NO) ||
@@ -129,6 +102,22 @@ static NSString *MMDrawerOpenSideKey = @"MMDrawerOpenSide";
     return hitView;
 }
 
+-(UINavigationBar*)navigationBarContainedWithinSubviewsOfView:(UIView*)view{
+    UINavigationBar * navBar = nil;
+    for(UIView * subview in [view subviews]){
+        if([view isKindOfClass:[UINavigationBar class]]){
+            navBar = (UINavigationBar*)view;
+            break;
+        }
+        else {
+            navBar = [self navigationBarContainedWithinSubviewsOfView:subview];
+            if (navBar != nil) {
+                break;
+            }
+        }
+    }
+    return navBar;
+}
 @end
 
 @interface MMDrawerController () <UIGestureRecognizerDelegate>{
@@ -1442,9 +1431,11 @@ static inline CGFloat originXForDrawerOriginAndTargetOriginOffset(CGFloat origin
 
 -(BOOL)isPointContainedWithinNavigationRect:(CGPoint)point{
     CGRect navigationBarRect = CGRectNull;
-    UINavigationBar * navBar = [self.centerViewController.view navigationBarContainedWithinSubviewsOfView];
-    navigationBarRect = [navBar convertRect:navBar.bounds toView:self.childControllerContainerView];
-    navigationBarRect = CGRectIntersection(navigationBarRect,self.childControllerContainerView.bounds);
+    if([self.centerViewController isKindOfClass:[UINavigationController class]]){
+        UINavigationBar * navBar = [(UINavigationController*)self.centerViewController navigationBar];
+        navigationBarRect = [navBar convertRect:navBar.bounds toView:self.childControllerContainerView];
+        navigationBarRect = CGRectIntersection(navigationBarRect,self.childControllerContainerView.bounds);
+    }
     return CGRectContainsPoint(navigationBarRect,point);
 }
 
